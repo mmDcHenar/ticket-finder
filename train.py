@@ -1,4 +1,4 @@
-from httpx import get
+from httpx import get, ConnectTimeout
 from time import sleep
 
 from json import dumps
@@ -21,8 +21,17 @@ while True:
     for i in range(13, 20):
         try:
             data = get(url.format(day=i)).json()
-            if "Error" in data and data["ErrorType"] == "GetAvailableError":
+            print(url.format(day=i))
+            if "Error" in data:
+                if data["ErrorType"] == "GetAvailableError":
+                    pass
+                elif data["ErrorType"] == "RateLimitExceeded":
+                    send_message(data["Error"])
+                    sleep(10*60)
                 print(data["Error"])
+                break
+            if "Trains" not in data:
+                print(data)
                 break
             for train in data["Trains"]:
                 for p in train["Prices"]:
@@ -38,11 +47,13 @@ while True:
     """
                         if c["Capacity"]:
                             send_message(text)
-                        print(text)
-        except Exception as e:
-            send_message(str(e))
+                            print(text)
+        except ConnectTimeout as e:
             print(e)
-        sleep(1)
-    sleep(30)
+        except Exception as e:
+            print(e)
+            send_message(str(e))
+        sleep(2)
+    sleep(120)
 
 
